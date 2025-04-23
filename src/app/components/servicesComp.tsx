@@ -1,7 +1,7 @@
 "use client"
 import 'dayjs/locale/he'
 import { useState, useEffect } from "react";
-import { TextField, Dialog, Table, TableHead, TableRow, TableCell, TableBody, Button, Select, MenuItem, Box, FormControl, InputLabel, Typography, IconButton } from "@mui/material";
+import { Dialog, Table, TableHead, TableRow, TableCell, TableBody, Button, Select, MenuItem, Box, FormControl, InputLabel, Typography, IconButton } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
@@ -26,7 +26,7 @@ interface SubServiceRow {
     serviceId: number;
     dogs: string[];
     frequency: string;
-    days: { date: Dayjs; times: string[] }[];
+    days: { date: Dayjs; times: Dayjs[] }[];
 }
 
 interface ServicesCompProps {
@@ -44,7 +44,7 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
         serviceId: 3,
         dogs: dogNames,
         frequency: "",
-        days: [] as { date: Dayjs; times: string[] }[],
+        days: [] as { date: Dayjs; times: Dayjs[] }[],
     });
 
     const [calendarOpen, setCalendarOpen] = useState(false);
@@ -64,18 +64,12 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
             window.alert("נא להגדיר תזמון")
             return;
         }
-
-        if (newRow.days.some(day => day.times.some(time => !time || time.trim() === ""))) {
+        if (newRow.days.some(day => day.times.some(time => !time || !time.isValid()))) {
             window.alert("אנא מלא שעה לכל תאריך שנבחר");
             return;
         }
 
-
         setSubServices(prev => [...prev, { ...newRow, id: Date.now() }]);
-
-        console.log(" NEW ROW : ", newRow)
-        console.log(" Tabel : ", subServices)
-
         setNewRow({
             id: Date.now(),
             serviceId: 3,
@@ -83,7 +77,6 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
             frequency: "",
             days: [],
         });
-
     };
 
     const deleteRow = (rowId: number) => {
@@ -118,29 +111,6 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
         );
     };
 
-    const calculateSummary = () => {
-        let total = 0;
-        const serviceCounts: Record<number, number> = {};
-
-        subServices.forEach((row) => {
-            const service = allServices.find((s) => s.id === row.serviceId);
-            if (!service) return;
-
-            const dogCount = row.dogs.length;
-            const frequencyCount =
-                row.days.reduce((sum, d) => sum + d.times.length, 0) || 1;
-
-            const rowTotal = service.price * dogCount * frequencyCount;
-            total += rowTotal;
-
-            serviceCounts[row.serviceId] =
-                (serviceCounts[row.serviceId] || 0) + dogCount * frequencyCount;
-        });
-
-        return { total, serviceCounts };
-    };
-
-
     useEffect(() => {
         if (dogNames.length > 0) {
             setNewRow((prev) => {
@@ -163,7 +133,6 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
             {/* תיבת חיפוש */}
 
             <Box sx={{ display: "flex", justifyContent: "flex-start", width: "33%" }}>
-
                 <Box sx={{
                     display: "flex", alignItems: "center", border: "1px solid #82cdd4", borderRadius: "12px",
                     px: 1.5, py: 0.5,
@@ -192,7 +161,7 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                 }
                                 return {
                                     ...prev,
-                                    days: [...prev.days, { date, times: [""] }]
+                                    days: [...prev.days, { date, times: [] }]
                                 };
                             });
                         }}
@@ -202,8 +171,6 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                     />
                 </LocalizationProvider>
             </Dialog>
-
-
 
             <Table sx={{ mt: 1 }}>
                 <TableHead sx={{
@@ -296,7 +263,6 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                     )}
                                 </TableCell>
 
-
                                 <TableCell>
 
                                     <Typography sx={{ color: "#58c3cc", fontWeight: "bold" }}>
@@ -317,7 +283,9 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                                         .format("dddd, D MMMM")}
                                                     {/* join all the times once */}
 
-                                                    {",   " + item.days[0].times}
+                                                    {", " + item.days[0].times
+                                                        .map(t => t.format("HH:mm"))
+                                                        .join(" , ")}
                                                 </Typography>
                                             ) : (item.days.map((dayObj, i) => (
                                                 <Box
@@ -337,7 +305,9 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
 
                                                     {/* first time (or join all times) */}
                                                     <Typography variant="body2" color="red">
-                                                        {dayObj.times.join(' , ')}
+                                                        {dayObj.times
+                                                            .map(t => t.format("HH:mm"))
+                                                            .join(" , ")}
                                                     </Typography>
                                                 </Box>
                                             )))
@@ -353,15 +323,11 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                     </IconButton>
                                 </TableCell>
 
-
-
-
                             </TableRow>
                         )
                     })}
 
                     {/* FORM ROW */}
-
 
                     <TableRow>
 
@@ -442,10 +408,10 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                             // turn each arrivalDay into {date,times}
                                             const allArrivalDays = arrivalData.map(d => ({
                                                 date: d.date,
-                                                times: Array(1).fill("")
+                                                times: []
                                             }));
 
-                                            let days: { date: Dayjs; times: string[] }[] = [];
+                                            let days: { date: Dayjs; times: Dayjs[] }[] = [];
                                             if (newFrequency === "כל יום") {
                                                 days = allArrivalDays;
                                             } else if (newFrequency === "בסוף אירוע") {
@@ -489,14 +455,14 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                                 <FormControl size="small" sx={{ width: 64 }}>
                                                     <InputLabel>פעמים</InputLabel>
                                                     <Select
-                                                        value={dayObj.times.length}
+                                                        value={dayObj.times.length || ""}
                                                         label="פעמים"
                                                         onChange={e => {
                                                             const count = Number(e.target.value);
                                                             setNewRow(prev => ({
                                                                 ...prev,
                                                                 days: prev.days.map((d, j) =>
-                                                                    j === i ? { ...d, times: Array(count).fill("") } : d
+                                                                    j === i ? { ...d, times: Array(count).fill(null) } : d
                                                                 ),
                                                             }));
                                                         }}
@@ -506,27 +472,27 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                                         ))}
                                                     </Select>
                                                 </FormControl>
-                                                {dayObj.times.map((text, idx) => (
-                                                    <TextField
+                                                {dayObj.times.map((timeVal, idx) => (
+                                                    <TimePicker
                                                         key={idx}
-                                                        label="שעה"
-                                                        size="small"
-                                                        value={text}
-                                                        onChange={e => {
-                                                            const newText = e.target.value;
+                                                        value={timeVal}
+                                                        onChange={(newVal) => {
                                                             setNewRow(prev => ({
                                                                 ...prev,
                                                                 days: prev.days.map((d, j) =>
                                                                     j === i
                                                                         ? {
                                                                             ...d,
-                                                                            times: d.times.map((t, k) => (k === idx ? newText : t)),
+                                                                            times: d.times.map((t, k) =>
+                                                                                k === idx ? newVal! : t
+                                                                            ),
                                                                         }
                                                                         : d
                                                                 ),
                                                             }));
                                                         }}
-                                                        sx={{ width: 100 }}
+
+                                                        slotProps={{ textField: { size: 'small', sx: { width: 100 } } }}
                                                     />
                                                 ))}
                                             </Box>
@@ -540,18 +506,25 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                         <Typography sx={{ fontSize: '0.875rem', color: 'gray', px: 2 }}>
                                             {formatArrivalSummary([arrivalData[arrivalData.length - 1]])}
                                         </Typography>
-                                        <TextField
-                                            label="שעה"
-                                            size="small"
-                                            value={newRow.days[0]?.times[0] || ""}
-                                            onChange={e => {
-                                                const t = e.target.value;
+
+                                        <TimePicker
+                                            value={newRow.days[0]?.times[0] ?? null}
+                                            onChange={(newVal) => {
+                                                if (newVal === null) return;
                                                 setNewRow(prev => ({
                                                     ...prev,
-                                                    days: prev.days.map(d => ({ ...d, times: [t] })),
+                                                    days: prev.days.map(d => ({
+                                                        ...d,
+                                                        times: [newVal]
+                                                    })),
                                                 }));
                                             }}
-                                            sx={{ width: 100, mt: 1 }}
+                                            slotProps={{
+                                                textField: {
+                                                    size: "small",
+                                                    sx: { width: 110, bgcolor: "lightgray" }
+                                                }
+                                            }}
                                         />
                                     </Box>
                                 )}
@@ -559,12 +532,13 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                 {/* כל יום */}
                                 {newRow.frequency === "כל יום" && (
                                     <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-                                        {/* show range of days */}
+
                                         <Typography sx={{ fontSize: '0.875rem', color: 'gray', px: 2 }}>
                                             {formatArrivalSummary(arrivalData)}
                                         </Typography>
 
-                                        {/* pick how many times per day */}
+                                        {/* pick how many times per day  */}
+
                                         <FormControl size="small" sx={{ width: 80 }}>
                                             <InputLabel>פעמים ליום</InputLabel>
                                             <Select
@@ -574,7 +548,7 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                                     const count = Number(e.target.value);
                                                     setNewRow(prev => ({
                                                         ...prev,
-                                                        days: prev.days.map(d => ({ ...d, times: Array(count).fill("") })),
+                                                        days: prev.days.map(d => ({ ...d, times: Array(count).fill(null) })),
                                                     }));
                                                 }}
                                             >
@@ -584,31 +558,33 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                             </Select>
                                         </FormControl>
 
-                                        {/* a single row of time inputs (same for all days) */}
+                                        {/* a single row of time inputs (same for all days)  */}
                                         <Box sx={{ display: "flex", gap: 1 }}>
-                                            {newRow.days[0]?.times.map((text, idx) => (
-                                                <TextField
+                                            {newRow.days[0]?.times.map((timeVal, idx) => (
+                                                <TimePicker
                                                     key={idx}
-                                                    label="שעה"
-                                                    size="small"
-                                                    value={text}
-                                                    onChange={e => {
-                                                        const newText = e.target.value;
+                                                    value={timeVal}
+                                                    onChange={(newVal) => {
+                                                        if (newVal === null) return;
                                                         setNewRow(prev => ({
                                                             ...prev,
                                                             days: prev.days.map(d => ({
-                                                                ...d,
-                                                                times: d.times.map((t, k) => (k === idx ? newText : t)),
-                                                            })),
-                                                        }));
+                                                                ...d, times: d.times.map((t, k) => (k === idx ? newVal : t))
+                                                            }))
+                                                        }))
+
                                                     }}
-                                                    sx={{ width: 100 }}
+                                                    slotProps={{
+                                                        textField: {
+                                                            size: "small",
+                                                            sx: { width: 110, bgcolor: "lightgray" }
+                                                        }
+                                                    }}
                                                 />
                                             ))}
                                         </Box>
                                     </Box>
                                 )}
-
 
                             </Box>
                         </TableCell>
@@ -621,10 +597,6 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
 
                 </TableBody>
             </Table>
-            <Button onClick={(() => {
-                console.log(calculateSummary())
-                console.log(subServices)
-            })}>חישוב יחידות</Button>
         </Box >
     );
 }
