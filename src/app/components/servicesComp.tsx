@@ -468,115 +468,147 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
 
                                 </FormControl>
 
-                                {newRow.frequency === "מס פעמים" ? (
+                                {/* מס פעמים */}
+                                {newRow.frequency === "מס פעמים" && (
                                     <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mt: 1 }}>
                                         {newRow.days.map((dayObj, i) => (
                                             <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                {/* remove-day button */}
                                                 <Button
                                                     size="small"
                                                     variant="outlined"
                                                     onClick={() =>
-                                                        setNewRow((prev) => ({
+                                                        setNewRow(prev => ({
                                                             ...prev,
                                                             days: prev.days.filter((_, j) => j !== i),
                                                         }))
                                                     }
                                                     sx={{ textTransform: "none", fontSize: "0.8rem" }}
                                                 >
-                                                    {dayObj.date.format("DD/MM")} ×
+                                                    {dayObj.date.format("DD/MM")} ×
                                                 </Button>
-
-                                                {/* per-day times selector */}
-                                                {newRow.frequency === "מס פעמים" &&
-
-                                                    <FormControl size="small" sx={{ width: 64 }}>
-                                                        <InputLabel>פעמים</InputLabel>
-                                                        <Select
-                                                            value={dayObj.times.length}
-                                                            label="פעמים"
-                                                            onChange={(e) => {
-                                                                const count = Number(e.target.value);
-                                                                setNewRow((prev) => ({
-                                                                    ...prev,
-                                                                    days: prev.days.map((d, j) =>
-                                                                        j === i
-                                                                            ? { ...d, times: Array(count).fill("") }
-                                                                            : d
-                                                                    ),
-                                                                }));
-                                                            }}
-                                                        >
-                                                            {[1, 2, 3, 4].map((n) => (
-                                                                <MenuItem key={n} value={n}>{n}</MenuItem>
-                                                            ))}
-                                                        </Select>
-                                                    </FormControl>
-                                                }
-
-                                                {dayObj.times.map((text: string, idx) => (
+                                                <FormControl size="small" sx={{ width: 64 }}>
+                                                    <InputLabel>פעמים</InputLabel>
+                                                    <Select
+                                                        value={dayObj.times.length}
+                                                        label="פעמים"
+                                                        onChange={e => {
+                                                            const count = Number(e.target.value);
+                                                            setNewRow(prev => ({
+                                                                ...prev,
+                                                                days: prev.days.map((d, j) =>
+                                                                    j === i ? { ...d, times: Array(count).fill("") } : d
+                                                                ),
+                                                            }));
+                                                        }}
+                                                    >
+                                                        {[1, 2, 3, 4].map(n => (
+                                                            <MenuItem key={n} value={n}>{n}</MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                </FormControl>
+                                                {dayObj.times.map((text, idx) => (
                                                     <TextField
-                                                        label="שעה"
                                                         key={idx}
+                                                        label="שעה"
                                                         size="small"
                                                         value={text}
-                                                        onChange={(e) => {
+                                                        onChange={e => {
                                                             const newText = e.target.value;
-                                                            setNewRow((prev) => ({
+                                                            setNewRow(prev => ({
                                                                 ...prev,
                                                                 days: prev.days.map((d, j) =>
                                                                     j === i
                                                                         ? {
                                                                             ...d,
-                                                                            times: d.times.map((t, k) =>
-                                                                                k === idx ? newText : t
-                                                                            ),
+                                                                            times: d.times.map((t, k) => (k === idx ? newText : t)),
                                                                         }
                                                                         : d
                                                                 ),
                                                             }));
                                                         }}
-
-
                                                         sx={{ width: 100 }}
                                                     />
                                                 ))}
-
-
-
                                             </Box>
                                         ))}
                                     </Box>
-                                ) : <Box>
-                                    <Typography sx={{ fontSize: '0.875rem', color: 'gray', px: 2 }}>
-                                        {arrivalData.length > 0 && (
-                                            newRow.frequency === "כל יום"
-                                                ? formatArrivalSummary(arrivalData)
-                                                : newRow.frequency === "בסוף אירוע"
-                                                    ? formatArrivalSummary([arrivalData[arrivalData.length - 1]])
-                                                    : null
-                                        )}
-                                    </Typography>
+                                )}
 
-                                    <TextField
-                                        label="שעה"
-                                        size="small"
-                                        value={newRow.days[0]?.times[0] || ""}
-                                        onChange={(e) => {
-                                            const t = e.target.value;
-                                            setNewRow((prev) => ({
-                                                ...prev,
-                                                days: prev.days.map((d) => ({
-                                                    ...d,
-                                                    times: [t],
-                                                })),
-                                            }));
-                                        }}
-                                        sx={{ width: 100, mt: 1 }}
-                                    />
-                                </Box>
+                                {/* בסוף אירוע */}
+                                {newRow.frequency === "בסוף אירוע" && (
+                                    <Box>
+                                        <Typography sx={{ fontSize: '0.875rem', color: 'gray', px: 2 }}>
+                                            {formatArrivalSummary([arrivalData[arrivalData.length - 1]])}
+                                        </Typography>
+                                        <TextField
+                                            label="שעה"
+                                            size="small"
+                                            value={newRow.days[0]?.times[0] || ""}
+                                            onChange={e => {
+                                                const t = e.target.value;
+                                                setNewRow(prev => ({
+                                                    ...prev,
+                                                    days: prev.days.map(d => ({ ...d, times: [t] })),
+                                                }));
+                                            }}
+                                            sx={{ width: 100, mt: 1 }}
+                                        />
+                                    </Box>
+                                )}
 
-                                }
+                                {/* כל יום */}
+                                {newRow.frequency === "כל יום" && (
+                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+                                        {/* show range of days */}
+                                        <Typography sx={{ fontSize: '0.875rem', color: 'gray', px: 2 }}>
+                                            {formatArrivalSummary(arrivalData)}
+                                        </Typography>
+
+                                        {/* pick how many times per day */}
+                                        <FormControl size="small" sx={{ width: 80 }}>
+                                            <InputLabel>פעמים ליום</InputLabel>
+                                            <Select
+                                                value={newRow.days[0]?.times.length || ""}
+                                                label="פעמים ליום"
+                                                onChange={e => {
+                                                    const count = Number(e.target.value);
+                                                    setNewRow(prev => ({
+                                                        ...prev,
+                                                        days: prev.days.map(d => ({ ...d, times: Array(count).fill("") })),
+                                                    }));
+                                                }}
+                                            >
+                                                {[1, 2, 3, 4].map(n => (
+                                                    <MenuItem key={n} value={n}>{n}</MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+
+                                        {/* a single row of time inputs (same for all days) */}
+                                        <Box sx={{ display: "flex", gap: 1 }}>
+                                            {newRow.days[0]?.times.map((text, idx) => (
+                                                <TextField
+                                                    key={idx}
+                                                    label="שעה"
+                                                    size="small"
+                                                    value={text}
+                                                    onChange={e => {
+                                                        const newText = e.target.value;
+                                                        setNewRow(prev => ({
+                                                            ...prev,
+                                                            days: prev.days.map(d => ({
+                                                                ...d,
+                                                                times: d.times.map((t, k) => (k === idx ? newText : t)),
+                                                            })),
+                                                        }));
+                                                    }}
+                                                    sx={{ width: 100 }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                )}
+
 
                             </Box>
                         </TableCell>
