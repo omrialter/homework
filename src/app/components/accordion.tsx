@@ -12,19 +12,18 @@ import AriveNDeparture from './arrivalAndDeparture';
 import DogInput from './dogInput';
 import { formatArrivalSummary } from "../services/formatArrivalSummary";
 import ServicesComp from "./servicesComp";
+import OrderSummary from "./orderSummary";
 
 interface SubServiceRow {
     id: number;
     serviceId: number;
     dogs: string[];
     frequency: string;
-    days: { date: Dayjs; times: string[] }[];
+    days: { date: Dayjs; times: Dayjs[] }[];
 }
 
-
-
 export function MyAccordion() {
-    const steps = ["לקוח", "שירות", "הגעה ועזיבה", "כלבים", "תתי שירותים", "תשלום"];
+    const steps = ["לקוח", "שירות", "הגעה ועזיבה", "כלבים", "תתי שירותים", "סיכום הזמנה"];
     const [completed, setCompleted] = useState<boolean[]>(Array(steps.length).fill(false));
     const [expandedPanels, setExpandedPanels] = useState<number[]>([0]);
     const [currentPanelIndex, setCurrentPanelIndex] = useState(0);
@@ -33,6 +32,7 @@ export function MyAccordion() {
     const [arrivalData, setArrivalData] = useState<{ date: Dayjs; from: Dayjs | null; to: Dayjs | null }[]>([]);
     const [dogNames, setDogNames] = useState<string[]>([]);
     const [subServices, setSubServices] = useState<SubServiceRow[]>([]);
+    const [totalPrice, setTotalPrice] = useState(0);
 
 
     const [formData, setFormData] = useState({
@@ -40,8 +40,8 @@ export function MyAccordion() {
         serviceType: '',
         arrivalTime: arrivalData,
         dogNames: dogNames,
-        serviceNotes: '',
-        paymentInfo: '',
+        subServices: subServices,
+        totalPrice: totalPrice
     });
 
     const isStepValid = (step = activeStep) => {
@@ -58,9 +58,9 @@ export function MyAccordion() {
             case 3:
                 return dogNames.length > 0;
             case 4:
-                return formData.serviceNotes.trim() !== '';
+                return formData.subServices.length > 0;
             case 5:
-                return formData.paymentInfo.trim() !== '';
+                return true;
             default:
                 return false;
         }
@@ -118,6 +118,14 @@ export function MyAccordion() {
             console.log(formData);
         }
     };
+
+    useEffect(() => {
+        setFormData(prev => ({
+            ...prev,
+            subServices: subServices,
+        }));
+    }, [subServices]);
+
     useEffect(() => {
         setFormData(prev => ({
             ...prev,
@@ -132,6 +140,13 @@ export function MyAccordion() {
             dogNames: dogNames,
         }));
     }, [dogNames]);
+
+    useEffect(() => {
+        setFormData(prev => ({
+            ...prev,
+            totalPrice: totalPrice,
+        }));
+    }, [totalPrice]);
 
 
 
@@ -203,12 +218,10 @@ export function MyAccordion() {
                                     setSubServices={setSubServices} />
                             )}
                             {index === 5 && (
-                                <TextField
-                                    label="פרטי תשלום"
-                                    name="paymentInfo"
-                                    value={formData.paymentInfo}
-                                    onChange={handleChange}
-                                    fullWidth
+                                <OrderSummary
+                                    subServices={subServices}
+                                    formData={formData}
+
                                 />
                             )}
 
