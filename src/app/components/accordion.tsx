@@ -18,8 +18,7 @@ interface SubServiceRow {
     serviceId: number;
     dogs: string[];
     frequency: string;
-    schedule: string;
-    days: { date: Dayjs; times: number }[];
+    days: { date: Dayjs; times: string[] }[];
 }
 
 

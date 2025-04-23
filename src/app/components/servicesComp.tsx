@@ -1,6 +1,7 @@
 "use client"
+import 'dayjs/locale/he'
 import { useState, useEffect } from "react";
-import { Dialog, Table, TableHead, TableRow, TableCell, TableBody, Button, Select, MenuItem, Box, FormControl, InputLabel, Typography, IconButton } from "@mui/material";
+import { TextField, Dialog, Table, TableHead, TableRow, TableCell, TableBody, Button, Select, MenuItem, Box, FormControl, InputLabel, Typography, IconButton } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
@@ -8,12 +9,14 @@ import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { Dayjs } from "dayjs";
+import { formatArrivalSummary } from "../services/formatArrivalSummary";
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 
 
 
 const allServices = [
     { id: 1, name: "מקלחת", price: 40.00 },
-    { id: 2, name: "אילוף בסיסי", price: 100.00 },
+    { id: 2, name: "אילוף", price: 100.00 },
     { id: 3, name: "טיול", price: 25.00 },
     { id: 4, name: "תספורת", price: 70.00 },
 ];
@@ -23,8 +26,7 @@ interface SubServiceRow {
     serviceId: number;
     dogs: string[];
     frequency: string;
-    schedule: string;
-    days: { date: Dayjs; times: number }[];
+    days: { date: Dayjs; times: string[] }[];
 }
 
 interface ServicesCompProps {
@@ -36,17 +38,13 @@ interface ServicesCompProps {
 
 export default function ServicesComp({ dogNames, subServices, setSubServices, arrivalData }: ServicesCompProps) {
 
-    const [selectedServiceId, setSelectedServiceId] = useState<number | "">("");
-
-
 
     const [newRow, setNewRow] = useState<SubServiceRow>({
         id: Date.now(),
-        serviceId: 0,
+        serviceId: 3,
         dogs: dogNames,
-        frequency: "בסוף אירוע",
-        schedule: "",
-        days: [] as { date: Dayjs; times: number }[],
+        frequency: "",
+        days: [] as { date: Dayjs; times: string[] }[],
     });
 
     const [calendarOpen, setCalendarOpen] = useState(false);
@@ -67,17 +65,25 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
             return;
         }
 
+        if (newRow.days.some(day => day.times.some(time => !time || time.trim() === ""))) {
+            window.alert("אנא מלא שעה לכל תאריך שנבחר");
+            return;
+        }
+
+
         setSubServices(prev => [...prev, { ...newRow, id: Date.now() }]);
 
+        console.log(" NEW ROW : ", newRow)
+        console.log(" Tabel : ", subServices)
 
         setNewRow({
             id: Date.now(),
-            serviceId: 0,
+            serviceId: 3,
             dogs: dogNames,
-            frequency: "בסוף אירוע",
-            schedule: "",
+            frequency: "",
             days: [],
         });
+
     };
 
     const deleteRow = (rowId: number) => {
@@ -122,7 +128,7 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
 
             const dogCount = row.dogs.length;
             const frequencyCount =
-                row.days.reduce((sum, d) => sum + d.times, 0) || 1;
+                row.days.reduce((sum, d) => sum + d.times.length, 0) || 1;
 
             const rowTotal = service.price * dogCount * frequencyCount;
             total += rowTotal;
@@ -186,7 +192,7 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                 }
                                 return {
                                     ...prev,
-                                    days: [...prev.days, { date, times: 1 }]
+                                    days: [...prev.days, { date, times: [""] }]
                                 };
                             });
                         }}
@@ -205,8 +211,8 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                 }}>
                     <TableRow>
                         <TableCell sx={{ borderTopLeftRadius: "8px", fontWeight: "bold", fontSize: "1rem" }}>שיכפול</TableCell>
-                        <TableCell sx={{ fontWeight: "bold", fontSize: "1rem" }}>תת שירות</TableCell>
-                        <TableCell sx={{ fontWeight: "bold", fontSize: "1rem" }}>כלבים</TableCell>
+                        <TableCell sx={{ fontWeight: "bold", fontSize: "1rem", width: "30px" }}>תת שירות</TableCell>
+                        <TableCell sx={{ fontWeight: "bold", fontSize: "1rem", width: "30px" }}>כלבים</TableCell>
                         <TableCell sx={{ fontWeight: "bold", fontSize: "1rem" }}>חזרות</TableCell>
                         <TableCell sx={{ borderTopRightRadius: "8px", fontWeight: "bold", fontSize: "1rem", textAlign: "start" }}>תזמון</TableCell>
                     </TableRow>
@@ -216,15 +222,14 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                     {/* TABLE */}
 
                     {subServices.map((item) => {
-                        const service = allServices.find(s => s.id === item.serviceId);
                         return (
                             <TableRow key={item.id}>
 
                                 {/* duplictae button */}
 
-                                <TableCell sx={{ maxWidth: "80px", px: 1 }}>
+                                <TableCell sx={{ maxWidth: "70px", px: 1 }}>
                                     <Box sx={{ display: "flex", gap: 1 }}>
-                                        <Button variant="outlined" sx={{ color: "#58c3cc" }}>נוסף</Button>
+                                        <Button size="small" variant="outlined" sx={{ color: "#58c3cc" }}>נוסף</Button>
                                         <ContentCopyIcon onClick={() => { duplicateRow(item.id) }} sx={{ color: "#58c3cc", cursor: 'pointer' }} />
                                     </Box>
                                 </TableCell>
@@ -234,6 +239,7 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                     <FormControl>
                                         <InputLabel>בחר שירות</InputLabel>
                                         <Select
+                                            size="small"
                                             value={item.serviceId}
                                             onChange={(e) => {
 
@@ -290,59 +296,57 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                     )}
                                 </TableCell>
 
-                                {/* לסדר תצוגה */}
+
                                 <TableCell>
-                                    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mt: 1 }}>
-                                        {item.days.map((dayObj, i) => (
-                                            <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1, border: "solid black 1px" }}>
-                                                {/* remove-day button */}
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    onClick={() =>
-                                                        setNewRow((prev) => ({
-                                                            ...prev,
-                                                            days: prev.days.filter((_, j) => j !== i),
-                                                        }))
-                                                    }
-                                                    sx={{ textTransform: "none", fontSize: "0.8rem" }}
+
+                                    <Typography sx={{ color: "#58c3cc", fontWeight: "bold" }}>
+                                        {item.frequency}
+                                    </Typography>
+
+                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1, color: "red" }}>
+                                        {
+                                            item.frequency === "כל יום" ? (
+                                                <Typography variant="body2" sx={{ mt: 1, color: "red" }}>
+                                                    {/* format the full range from first to last */}
+                                                    {item.days[0].date
+                                                        .locale("he")
+                                                        .format("dddd, D MMMM")}{" "}
+                                                    -{" "}
+                                                    {item.days[item.days.length - 1].date
+                                                        .locale("he")
+                                                        .format("dddd, D MMMM")}
+                                                    {/* join all the times once */}
+
+                                                    {",   " + item.days[0].times}
+                                                </Typography>
+                                            ) : (item.days.map((dayObj, i) => (
+                                                <Box
+                                                    key={i}
+                                                    sx={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 1,
+                                                        p: 0.5
+
+                                                    }}
                                                 >
-                                                    {dayObj.date.format("DD/MM")} ×
-                                                </Button>
+                                                    {/* date */}
+                                                    <Typography variant="body2">
+                                                        {dayObj.date.locale('he').format('dddd, D MMMM')}
+                                                    </Typography>
 
-
-                                                <FormControl size="small" sx={{ width: 64 }}>
-                                                    <InputLabel>פעמים</InputLabel>
-                                                    <Select
-                                                        value={dayObj.times}
-                                                        label="פעמים"
-                                                        onChange={(e) => {
-                                                            const t = Number(e.target.value);
-                                                            setNewRow((prev) => ({
-                                                                ...prev,
-                                                                days: prev.days.map((d, j) =>
-                                                                    j === i
-                                                                        ? { ...d, times: t }
-                                                                        : d
-                                                                ),
-                                                            }));
-                                                        }}
-                                                    >
-                                                        {[1, 2, 3, 4].map((n) => (
-                                                            <MenuItem key={n} value={n}>{n}</MenuItem>
-                                                        ))}
-                                                    </Select>
-                                                </FormControl>
-                                            </Box>
-                                        ))}
+                                                    {/* first time (or join all times) */}
+                                                    <Typography variant="body2" color="red">
+                                                        {dayObj.times.join(' , ')}
+                                                    </Typography>
+                                                </Box>
+                                            )))
+                                        }
                                     </Box>
-
-
-
                                 </TableCell>
 
-                                <TableCell>
-                                    <Button color="error" variant="contained">📅</Button>
+                                <TableCell sx={{ display: "flex" }}>
+                                    <Button size="small" color="error" variant="contained">📅</Button>
 
                                     <IconButton onClick={() => { deleteRow(item.id) }}>
                                         <DeleteIcon />
@@ -357,19 +361,22 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                     })}
 
                     {/* FORM ROW */}
+
+
                     <TableRow>
 
                         {/* Add button */}
-                        <TableCell>
-                            <Button variant="outlined" sx={{ color: "white", bgcolor: "#58c3cc" }} onClick={handleAdd}>הוספה</Button>
+                        <TableCell >
+                            <Button size="small" variant="outlined" sx={{ color: "white", bgcolor: "#58c3cc" }} onClick={handleAdd}>הוספה</Button>
                         </TableCell>
 
                         {/* Service-Type */}
                         <TableCell>
-                            <Box sx={{ display: "flex", flexDirection: "column" }}>
+                            <Box sx={{ display: "flex", flexDirection: "column", maxWidth: "140px", width: "100%", }}>
                                 <FormControl>
                                     <InputLabel>בחר שירות</InputLabel>
                                     <Select
+                                        size="small"
                                         value={newRow.serviceId}
                                         onChange={(e) =>
                                             setNewRow({ ...newRow, serviceId: Number(e.target.value) })
@@ -386,8 +393,8 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                         </TableCell>
 
                         {/* Dogs */}
-                        <TableCell >
-                            <Box sx={{ display: "flex", gap: 1 }}>
+                        <TableCell  >
+                            <Box sx={{ display: "flex", gap: 1, width: "100%" }}>
                                 {newRow.dogs.map((dog, i) => (
                                     <Button key={i} size="small"
                                         variant="outlined" sx={{ borderRadius: "6px" }}
@@ -427,6 +434,7 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                 <FormControl>
                                     <InputLabel>בחר סוג</InputLabel>
                                     <Select
+                                        size="small"
                                         value={newRow.frequency}
                                         label="בחר חזרות"
                                         onChange={(e) => {
@@ -434,13 +442,20 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                             // turn each arrivalDay into {date,times}
                                             const allArrivalDays = arrivalData.map(d => ({
                                                 date: d.date,
-                                                times: 1
+                                                times: Array(1).fill("")
                                             }));
+
+                                            let days: { date: Dayjs; times: string[] }[] = [];
+                                            if (newFrequency === "כל יום") {
+                                                days = allArrivalDays;
+                                            } else if (newFrequency === "בסוף אירוע") {
+                                                days = [allArrivalDays[allArrivalDays.length - 1]]
+                                            }
 
                                             setNewRow(prev => ({
                                                 ...prev,
                                                 frequency: newFrequency,
-                                                days: newFrequency === "כל יום" ? allArrivalDays : []
+                                                days,
                                             }));
                                         }}
                                     >
@@ -453,7 +468,7 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
 
                                 </FormControl>
 
-                                {newRow.days.length > 0 && (
+                                {newRow.frequency === "מס פעמים" ? (
                                     <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mt: 1 }}>
                                         {newRow.days.map((dayObj, i) => (
                                             <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -473,32 +488,95 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                                 </Button>
 
                                                 {/* per-day times selector */}
-                                                <FormControl size="small" sx={{ width: 64 }}>
-                                                    <InputLabel>פעמים</InputLabel>
-                                                    <Select
-                                                        value={dayObj.times}
-                                                        label="פעמים"
+                                                {newRow.frequency === "מס פעמים" &&
+
+                                                    <FormControl size="small" sx={{ width: 64 }}>
+                                                        <InputLabel>פעמים</InputLabel>
+                                                        <Select
+                                                            value={dayObj.times.length}
+                                                            label="פעמים"
+                                                            onChange={(e) => {
+                                                                const count = Number(e.target.value);
+                                                                setNewRow((prev) => ({
+                                                                    ...prev,
+                                                                    days: prev.days.map((d, j) =>
+                                                                        j === i
+                                                                            ? { ...d, times: Array(count).fill("") }
+                                                                            : d
+                                                                    ),
+                                                                }));
+                                                            }}
+                                                        >
+                                                            {[1, 2, 3, 4].map((n) => (
+                                                                <MenuItem key={n} value={n}>{n}</MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </FormControl>
+                                                }
+
+                                                {dayObj.times.map((text: string, idx) => (
+                                                    <TextField
+                                                        label="שעה"
+                                                        key={idx}
+                                                        size="small"
+                                                        value={text}
                                                         onChange={(e) => {
-                                                            const t = Number(e.target.value);
+                                                            const newText = e.target.value;
                                                             setNewRow((prev) => ({
                                                                 ...prev,
                                                                 days: prev.days.map((d, j) =>
                                                                     j === i
-                                                                        ? { ...d, times: t }
+                                                                        ? {
+                                                                            ...d,
+                                                                            times: d.times.map((t, k) =>
+                                                                                k === idx ? newText : t
+                                                                            ),
+                                                                        }
                                                                         : d
                                                                 ),
                                                             }));
                                                         }}
-                                                    >
-                                                        {[1, 2, 3, 4].map((n) => (
-                                                            <MenuItem key={n} value={n}>{n}</MenuItem>
-                                                        ))}
-                                                    </Select>
-                                                </FormControl>
+
+
+                                                        sx={{ width: 100 }}
+                                                    />
+                                                ))}
+
+
+
                                             </Box>
                                         ))}
                                     </Box>
-                                )}
+                                ) : <Box>
+                                    <Typography sx={{ fontSize: '0.875rem', color: 'gray', px: 2 }}>
+                                        {arrivalData.length > 0 && (
+                                            newRow.frequency === "כל יום"
+                                                ? formatArrivalSummary(arrivalData)
+                                                : newRow.frequency === "בסוף אירוע"
+                                                    ? formatArrivalSummary([arrivalData[arrivalData.length - 1]])
+                                                    : null
+                                        )}
+                                    </Typography>
+
+                                    <TextField
+                                        label="שעה"
+                                        size="small"
+                                        value={newRow.days[0]?.times[0] || ""}
+                                        onChange={(e) => {
+                                            const t = e.target.value;
+                                            setNewRow((prev) => ({
+                                                ...prev,
+                                                days: prev.days.map((d) => ({
+                                                    ...d,
+                                                    times: [t],
+                                                })),
+                                            }));
+                                        }}
+                                        sx={{ width: 100, mt: 1 }}
+                                    />
+                                </Box>
+
+                                }
 
                             </Box>
                         </TableCell>
