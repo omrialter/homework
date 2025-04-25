@@ -69,7 +69,7 @@ export default function OrderSummary({
                 p: 3,
                 bgcolor: "background.paper",
                 borderRadius: 2,
-                width: "100%"
+                width: "50%"
             }}
         >
             <Box sx={{ display: "flex", justifyContent: "space-between", my: 1, alignItems: "center" }}>
@@ -85,13 +85,13 @@ export default function OrderSummary({
 
             </Box>
 
-            <Stack sx={{ width: "80%" }} spacing={1}>
+            <Stack sx={{ width: "50%" }} spacing={1}>
                 {/* פרטים */}
                 <Box
                     sx={{
                         display: "flex",
-                        alignItems: "start",
-                        gap: 4
+                        justifyContent: "space-between"
+
                     }}
                 >
                     <Typography variant="body2" sx={{ fontWeight: "bold" }}>
@@ -110,8 +110,8 @@ export default function OrderSummary({
                 <Box
                     sx={{
                         display: "flex",
-                        alignItems: "start",
-                        gap: 4
+                        justifyContent: "space-between"
+
                     }}
                 >
                     <Typography variant="body2" sx={{ fontWeight: "bold" }}>
@@ -129,8 +129,8 @@ export default function OrderSummary({
                 <Box
                     sx={{
                         display: "flex",
-                        alignItems: "start",
-                        gap: 4
+                        justifyContent: "space-between"
+
                     }}
                 >
                     <Typography variant="body2" sx={{ fontWeight: "bold" }}>
@@ -146,8 +146,8 @@ export default function OrderSummary({
                 <Box
                     sx={{
                         display: "flex",
-                        alignItems: "start",
-                        gap: 4
+                        justifyContent: "space-between"
+
                     }}
                 >
                     <Typography variant="body2" sx={{ fontWeight: "bold" }}>
@@ -181,7 +181,7 @@ export default function OrderSummary({
                                         key={svcId}
                                         sx={{
                                             display: "flex",
-                                            justifyContent: "space-between",
+                                            justifyContent: "space-between"
                                         }}
                                     >
                                         <Typography variant="body2">
@@ -195,9 +195,6 @@ export default function OrderSummary({
                             }
                         )}
                     </Stack>
-                    <Button size="small" variant="outlined" sx={{ mt: 1 }}>
-                        עדכון
-                    </Button>
                 </Box>
 
                 <Divider />
