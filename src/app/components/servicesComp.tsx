@@ -647,9 +647,6 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
 
                 </TableBody>
             </Table>
-            <Button onClick={(() => {
-                console.log(newRow);
-            })}>חישוב יחידות</Button>
         </Box >
     );
 }
