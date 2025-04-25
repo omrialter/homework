@@ -13,6 +13,8 @@ import DogInput from './dogInput';
 import { formatArrivalSummary } from "../services/formatArrivalSummary";
 import ServicesComp from "./servicesComp";
 import OrderSummary from "./orderSummary";
+import { calculateSummary } from "../services/calculator";
+
 
 interface SubServiceRow {
     id: number;
@@ -32,7 +34,7 @@ export function MyAccordion() {
     const [arrivalData, setArrivalData] = useState<{ date: Dayjs; from: Dayjs | null; to: Dayjs | null }[]>([]);
     const [dogNames, setDogNames] = useState<string[]>([]);
     const [subServices, setSubServices] = useState<SubServiceRow[]>([]);
-    const [totalPrice, setTotalPrice] = useState(0);
+
 
 
     const [formData, setFormData] = useState({
@@ -41,8 +43,30 @@ export function MyAccordion() {
         arrivalTime: arrivalData,
         dogNames: dogNames,
         subServices: subServices,
-        totalPrice: totalPrice
+        totalPrice: 0,
     });
+
+
+    let total = 0;
+    const serviceCounts: Record<number, number> = {};
+    const allServices = [
+        { id: 1, name: "מקלחת", price: 40.0 },
+        { id: 2, name: "אילוף", price: 100.0 },
+        { id: 3, name: "טיול", price: 25.0 },
+        { id: 4, name: "תספורת", price: 70.0 },
+    ];
+
+    subServices.forEach((row) => {
+        const svc = allServices.find((s) => s.id === row.serviceId);
+        if (!svc) return;
+        const dogCount = row.dogs.length;
+        const execCount = row.days.reduce((sum, d) => sum + d.times.length, 0) || 1;
+        const rowUnits = dogCount * execCount;
+        total += svc.price * rowUnits;
+        serviceCounts[row.serviceId] =
+            (serviceCounts[row.serviceId] || 0) + rowUnits;
+    });
+
 
     const isStepValid = (step = activeStep) => {
         switch (step) {
@@ -113,9 +137,20 @@ export function MyAccordion() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const { total, serviceCounts } = calculateSummary(subServices, arrivalData.length);
+        const payload = {
+            customerName: formData.customerName,
+            serviceType: formData.serviceType,
+            arrivalTime: arrivalData,
+            dogNames: dogNames,
+            subServices: subServices,
+            totalPrice: total,
+            serviceCounts: serviceCounts,
+        };
+
         if (isStepValid(currentPanelIndex)) {
             alert("Form submitted!");
-            console.log(formData);
+            console.log("Submitting:", payload);
         }
     };
 
@@ -124,6 +159,7 @@ export function MyAccordion() {
             ...prev,
             subServices: subServices,
         }));
+
     }, [subServices]);
 
     useEffect(() => {
@@ -141,12 +177,6 @@ export function MyAccordion() {
         }));
     }, [dogNames]);
 
-    useEffect(() => {
-        setFormData(prev => ({
-            ...prev,
-            totalPrice: totalPrice,
-        }));
-    }, [totalPrice]);
 
 
 
@@ -205,7 +235,10 @@ export function MyAccordion() {
                                     } />
                             )}
                             {index === 2 && (
-                                <AriveNDeparture onChange={(data) => setArrivalData(data)} />
+                                <AriveNDeparture onChange={(data) => setArrivalData(data)}
+
+                                    serviceType={formData.serviceType}
+                                />
                             )}
                             {index === 3 && (
                                 <DogInput dogNames={dogNames} setDogNames={setDogNames} />
@@ -215,7 +248,8 @@ export function MyAccordion() {
                                     dogNames={dogNames}
                                     subServices={subServices}
                                     arrivalData={arrivalData}
-                                    setSubServices={setSubServices} />
+                                    setSubServices={setSubServices}
+                                />
                             )}
                             {index === 5 && (
                                 <OrderSummary

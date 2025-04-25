@@ -11,6 +11,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { Dayjs } from "dayjs";
 import { formatArrivalSummary } from "../services/formatArrivalSummary";
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import { calculateSummary } from "../services/calculator";
 
 
 
@@ -34,6 +35,7 @@ interface ServicesCompProps {
     dogNames: string[];
     subServices: SubServiceRow[];
     setSubServices: React.Dispatch<React.SetStateAction<SubServiceRow[]>>;
+
 }
 
 export default function ServicesComp({ dogNames, subServices, setSubServices, arrivalData }: ServicesCompProps) {
@@ -64,12 +66,21 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
             window.alert("נא להגדיר תזמון")
             return;
         }
-        if (newRow.days.some(day => day.times.some(time => !time || !time.isValid()))) {
+        if (newRow.days.some(day => day.times.length < 1) && newRow.frequency !== "בסוף אירוע") {
+            window.alert("נא לבחור כמות פעמים")
+            return;
+        }
+        if (
+            newRow.days.some(
+                day => day.times.length === 0 || day.times.some(time => !time)
+            )
+        ) {
             window.alert("אנא מלא שעה לכל תאריך שנבחר");
             return;
         }
 
         setSubServices(prev => [...prev, { ...newRow, id: Date.now() }]);
+
         setNewRow({
             id: Date.now(),
             serviceId: 3,
@@ -177,7 +188,7 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                     bgcolor: '#f3f4f6'
                 }}>
                     <TableRow>
-                        <TableCell sx={{ borderTopLeftRadius: "8px", fontWeight: "bold", fontSize: "1rem" }}>שיכפול</TableCell>
+                        <TableCell sx={{ borderTopLeftRadius: "8px", fontWeight: "bold", fontSize: "1rem", width: "30px" }}>שיכפול</TableCell>
                         <TableCell sx={{ fontWeight: "bold", fontSize: "1rem", width: "30px" }}>תת שירות</TableCell>
                         <TableCell sx={{ fontWeight: "bold", fontSize: "1rem", width: "30px" }}>כלבים</TableCell>
                         <TableCell sx={{ fontWeight: "bold", fontSize: "1rem" }}>חזרות</TableCell>
@@ -395,6 +406,8 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                             )}
                         </TableCell>
 
+                        {/* חזרות */}
+
                         <TableCell>
                             <Box sx={{ display: "flex", gap: 2 }}>
                                 <FormControl>
@@ -437,68 +450,85 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                 {/* מס פעמים */}
                                 {newRow.frequency === "מס פעמים" && (
                                     <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mt: 1 }}>
-                                        {newRow.days.map((dayObj, i) => (
-                                            <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    onClick={() =>
-                                                        setNewRow(prev => ({
-                                                            ...prev,
-                                                            days: prev.days.filter((_, j) => j !== i),
-                                                        }))
-                                                    }
-                                                    sx={{ textTransform: "none", fontSize: "0.8rem" }}
-                                                >
-                                                    {dayObj.date.format("DD/MM")} ×
-                                                </Button>
-                                                <FormControl size="small" sx={{ width: 64 }}>
-                                                    <InputLabel>פעמים</InputLabel>
-                                                    <Select
-                                                        value={dayObj.times.length || ""}
-                                                        label="פעמים"
-                                                        onChange={e => {
-                                                            const count = Number(e.target.value);
-                                                            setNewRow(prev => ({
-                                                                ...prev,
-                                                                days: prev.days.map((d, j) =>
-                                                                    j === i ? { ...d, times: Array(count).fill(null) } : d
-                                                                ),
-                                                            }));
-                                                        }}
-                                                    >
-                                                        {[1, 2, 3, 4].map(n => (
-                                                            <MenuItem key={n} value={n}>{n}</MenuItem>
-                                                        ))}
-                                                    </Select>
-                                                </FormControl>
-                                                {dayObj.times.map((timeVal, idx) => (
-                                                    <TimePicker
-                                                        key={idx}
-                                                        value={timeVal}
-                                                        onChange={(newVal) => {
-                                                            setNewRow(prev => ({
-                                                                ...prev,
-                                                                days: prev.days.map((d, j) =>
-                                                                    j === i
-                                                                        ? {
-                                                                            ...d,
-                                                                            times: d.times.map((t, k) =>
-                                                                                k === idx ? newVal! : t
-                                                                            ),
-                                                                        }
-                                                                        : d
-                                                                ),
-                                                            }));
-                                                        }}
+                                        {newRow.days.map((dayObj, i) => {
+                                            const arrivalInfo = arrivalData.find(a => a.date.isSame(dayObj.date, 'day'));
 
-                                                        slotProps={{ textField: { size: 'small', sx: { width: 100 } } }}
-                                                    />
-                                                ))}
-                                            </Box>
-                                        ))}
+                                            const minTime = arrivalInfo?.from ?? undefined;
+                                            const maxTime = arrivalInfo?.to ?? undefined;
+
+                                            return (
+                                                <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={() =>
+                                                            setNewRow(prev => ({
+                                                                ...prev,
+                                                                days: prev.days.filter((_, j) => j !== i),
+                                                            }))
+                                                        }
+                                                        sx={{ textTransform: "none", fontSize: "0.8rem" }}
+                                                    >
+                                                        {dayObj.date.format("DD/MM")} ×
+                                                    </Button>
+
+                                                    <FormControl size="small" sx={{ width: 64 }}>
+                                                        <InputLabel>פעמים</InputLabel>
+                                                        <Select
+                                                            value={dayObj.times.length || ""}
+                                                            label="פעמים"
+                                                            onChange={e => {
+                                                                const count = Number(e.target.value);
+                                                                setNewRow(prev => ({
+                                                                    ...prev,
+                                                                    days: prev.days.map((d, j) =>
+                                                                        j === i ? { ...d, times: Array(count).fill(null) } : d
+                                                                    ),
+                                                                }));
+                                                            }}
+                                                        >
+                                                            {[1, 2, 3, 4].map(n => (
+                                                                <MenuItem key={n} value={n}>{n}</MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </FormControl>
+
+                                                    {dayObj.times.map((timeVal, idx) => (
+                                                        <TimePicker
+                                                            key={idx}
+                                                            value={timeVal}
+                                                            minTime={minTime}
+                                                            maxTime={maxTime}
+                                                            onChange={(newVal) => {
+                                                                if (newVal === null) return;
+                                                                setNewRow(prev => ({
+                                                                    ...prev,
+                                                                    days: prev.days.map((d, j) =>
+                                                                        j === i
+                                                                            ? {
+                                                                                ...d,
+                                                                                times: d.times.map((t, k) =>
+                                                                                    k === idx ? newVal! : t
+                                                                                ),
+                                                                            }
+                                                                            : d
+                                                                    ),
+                                                                }));
+                                                            }}
+                                                            slotProps={{
+                                                                textField: {
+                                                                    size: 'small',
+                                                                    sx: { width: 100 }
+                                                                }
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            );
+                                        })}
                                     </Box>
                                 )}
+
 
                                 {/* בסוף אירוע */}
                                 {newRow.frequency === "בסוף אירוע" && (
@@ -507,25 +537,35 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
                                             {formatArrivalSummary([arrivalData[arrivalData.length - 1]])}
                                         </Typography>
 
-                                        <TimePicker
-                                            value={newRow.days[0]?.times[0] ?? null}
-                                            onChange={(newVal) => {
-                                                if (newVal === null) return;
-                                                setNewRow(prev => ({
-                                                    ...prev,
-                                                    days: prev.days.map(d => ({
-                                                        ...d,
-                                                        times: [newVal]
-                                                    })),
-                                                }));
-                                            }}
-                                            slotProps={{
-                                                textField: {
-                                                    size: "small",
-                                                    sx: { width: 110, bgcolor: "lightgray" }
-                                                }
-                                            }}
-                                        />
+                                        {(() => {
+                                            const lastArrival = arrivalData[arrivalData.length - 1];
+                                            const minTime = lastArrival?.from ?? undefined;
+                                            const maxTime = lastArrival?.to ?? undefined;
+
+                                            return (
+                                                <TimePicker
+                                                    value={newRow.days[0]?.times[0] ?? null}
+                                                    minTime={minTime}
+                                                    maxTime={maxTime}
+                                                    onChange={(newVal) => {
+                                                        if (newVal === null) return;
+                                                        setNewRow(prev => ({
+                                                            ...prev,
+                                                            days: prev.days.map(d => ({
+                                                                ...d,
+                                                                times: [newVal]
+                                                            })),
+                                                        }));
+                                                    }}
+                                                    slotProps={{
+                                                        textField: {
+                                                            size: "small",
+                                                            sx: { width: 110, bgcolor: "lightgray" }
+                                                        }
+                                                    }}
+                                                />
+                                            );
+                                        })()}
                                     </Box>
                                 )}
 
@@ -560,28 +600,38 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
 
                                         {/* a single row of time inputs (same for all days)  */}
                                         <Box sx={{ display: "flex", gap: 1 }}>
-                                            {newRow.days[0]?.times.map((timeVal, idx) => (
-                                                <TimePicker
-                                                    key={idx}
-                                                    value={timeVal}
-                                                    onChange={(newVal) => {
-                                                        if (newVal === null) return;
-                                                        setNewRow(prev => ({
-                                                            ...prev,
-                                                            days: prev.days.map(d => ({
-                                                                ...d, times: d.times.map((t, k) => (k === idx ? newVal : t))
-                                                            }))
-                                                        }))
+                                            {newRow.days[0]?.times.map((timeVal, idx) => {
+                                                const firstDay = newRow.days[0];
+                                                const arrivalInfo = arrivalData.find(a => a.date.isSame(firstDay.date, 'day'));
 
-                                                    }}
-                                                    slotProps={{
-                                                        textField: {
-                                                            size: "small",
-                                                            sx: { width: 110, bgcolor: "lightgray" }
-                                                        }
-                                                    }}
-                                                />
-                                            ))}
+                                                return (
+                                                    <TimePicker
+                                                        key={idx}
+                                                        value={timeVal}
+                                                        minTime={arrivalInfo?.from ?? undefined}
+                                                        maxTime={arrivalInfo?.to ?? undefined}
+                                                        onChange={(newVal) => {
+                                                            if (newVal === null) return;
+                                                            setNewRow(prev => ({
+                                                                ...prev,
+                                                                days: prev.days.map(d => ({
+                                                                    ...d, times: d.times.map((t, k) => (k === idx ? newVal : t))
+                                                                }))
+                                                            }))
+
+                                                        }}
+                                                        slotProps={{
+                                                            textField: {
+                                                                size: "small",
+                                                                sx: { width: 110, bgcolor: "lightgray" }
+                                                            }
+                                                        }}
+                                                    />
+                                                )
+                                            }
+                                            )}
+
+
                                         </Box>
                                     </Box>
                                 )}
@@ -597,6 +647,9 @@ export default function ServicesComp({ dogNames, subServices, setSubServices, ar
 
                 </TableBody>
             </Table>
+            <Button onClick={(() => {
+                console.log(newRow);
+            })}>חישוב יחידות</Button>
         </Box >
     );
 }

@@ -10,12 +10,16 @@ import { useState, useEffect } from "react";
 
 
 
+interface AriveNDepartureProps {
+    onChange: (data: { date: Dayjs; from: Dayjs | null; to: Dayjs | null }[]) => void;
+    serviceType: string;
+}
 
 
+export default function AriveNDeparture({ onChange, serviceType }: AriveNDepartureProps) {
 
-export default function AriveNDeparture(
-    { onChange }: { onChange: (data: { date: Dayjs; from: Dayjs | null; to: Dayjs | null }[]) => void }
-) {
+    const isNightPension = serviceType === "פנסיון לילה";
+
 
     const [selectedDates, setSelectedDates] = useState<
         { date: Dayjs; from: Dayjs | null; to: Dayjs | null }[]
@@ -98,6 +102,7 @@ export default function AriveNDeparture(
 
 
                 <Box sx={{ width: "60%", display: "flex", flexDirection: "column", gap: 1 }}>
+
                     {selectedDates.map((entry, index) => (
                         <Box
                             key={entry.date.toString()}
@@ -115,16 +120,16 @@ export default function AriveNDeparture(
                             </Typography>
 
                             <TimePicker
-                                value={entry.to}
-                                onChange={(value) => handleTimeChange(index, "to", value)}
+                                value={entry.from}
+                                onChange={(value) => handleTimeChange(index, "from", value)}
                                 slotProps={{ textField: { size: "small", sx: { width: 110, bgcolor: "lightgray" } } }}
                             />
 
                             <Typography>עד</Typography>
 
                             <TimePicker
-                                value={entry.from}
-                                onChange={(value) => handleTimeChange(index, "from", value)}
+                                value={entry.to}
+                                onChange={(value) => handleTimeChange(index, "to", value)}
                                 slotProps={{ textField: { size: "small", sx: { width: 110, bgcolor: "lightgray" } } }}
                             />
 
